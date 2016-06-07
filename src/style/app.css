@@ -28,3 +28,7 @@
     text-align: center;
     width: 18px;
 }
+
+.story-header {
+    font: bold 12px Arial, sans-serif;
+}

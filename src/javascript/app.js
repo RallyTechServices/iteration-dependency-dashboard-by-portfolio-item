@@ -164,7 +164,13 @@ Ext.define("TSDependencyByPI", {
     _collectByIteration: function(stories) {
         var stories_by_iteration = {};
         Ext.Array.each(stories, function(story){
-            var iteration = story.get('Iteration');
+            
+            var iteration = story.get('Iteration') || { 
+                StartDate: null,
+                EndDate: null,
+                Name: "Unscheduled"
+            };
+            
             var iteration_start = iteration.StartDate;
             if ( Ext.isEmpty(stories_by_iteration[iteration_start]) ) {
                 stories_by_iteration[iteration_start] = {
@@ -202,9 +208,11 @@ Ext.define("TSDependencyByPI", {
                 overflowY: 'auto'
             });
             
+            var iteration_start = iteration.StartDate || "--";
+            
             var header = box.add({
                 xtype:'container',
-                html: iteration.Name + '<br/>' + iteration.StartDate.replace(/T.*$/,'') + '<hr/>'
+                html: iteration.Name + '<br/>' + iteration_start.replace(/T.*$/,'') + '<hr/>'
             });
             
             var summary = box.add({
@@ -214,6 +222,7 @@ Ext.define("TSDependencyByPI", {
             Ext.Array.each(stories, function(story){
                 summary.add({
                     xtype:'container',
+                    cls: 'story-header',
                     html: Ext.String.format("{0} {1} - {2}",
                         story.get('Project')._refObjectName,
                         story.get('FormattedID'),
@@ -233,7 +242,7 @@ Ext.define("TSDependencyByPI", {
                         var story_end = iteration.EndDate;
                         var pred_end = predecessor.get('Iteration').EndDate;
                         
-                        if ( pred_end >= story_end ) {
+                        if ( pred_end >= story_end && !Ext.isEmpty(story_end) ) {
                             status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'>  Scheduled for " + pred_end.replace(/T.*$/,'');
                         } else { 
                             status_message = "Scheduled for " + pred_end.replace(/T.*$/,'');
