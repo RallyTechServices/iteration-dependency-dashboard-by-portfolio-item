@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dependency Dashboard by Portfolio Item</title>
+    <!--  (c) 2016 CA Technologies.  All Rights Reserved. -->
+    <!--  Build Date: Mon Jun 06 2016 18:48:04 GMT-0700 (PDT) -->
+    
+    <script type="text/javascript">
+        var APP_BUILD_DATE = "Mon Jun 06 2016 18:48:04 GMT-0700 (PDT)";
+        var BUILDER = "jmartin";
+        var CHECKSUM = 8280936018;
+    </script>
+    
+    <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
+
+    <script type="text/javascript">
+        Rally.onReady(function() {
+             
+Ext.define('TSUtilities', {
+    singleton: true,
+    
+    loadWsapiRecords: function(config,returnOperation){
+        var deferred = Ext.create('Deft.Deferred');
+        var me = this;
+        var default_config = {
+            model: 'Defect',
+            fetch: ['ObjectID']
+        };
+        Ext.create('Rally.data.wsapi.Store', Ext.Object.merge(default_config,config)).load({
+            callback : function(records, operation, successful) {
+                if (successful){
+                    if ( returnOperation ) {
+                        deferred.resolve(operation);
+                    } else {
+                        deferred.resolve(records);
+                    }
+                } else {
+                    deferred.reject('Problem loading: ' + operation.error.errors.join('. '));
+                }
+            }
+        });
+        return deferred.promise;
+    },
+    
+    loadWsapiRecordsWithParallelPages: function(config) {
+        var deferred = Ext.create('Deft.Deferred'),
+            me = this;
+        
+        var count_check_config = Ext.clone(config);
+        count_check_config.limit = 1;
+        count_check_config.pageSize = 1;
+        
+        this.loadWsapiRecords(count_check_config, true).then({
+            success: function(operation) {
+                
+                config.pageSize = 200;
+                config.limit = config.pageSize;
+                var total = operation.resultSet.totalRecords;
+                var page_count = Math.ceil(total/config.pageSize);
+                    
+                var promises = [];
+                Ext.Array.each(_.range(1,page_count+1), function(page_index) {
+                    var config_clone = Ext.clone(config);
+                    config_clone.currentPage = page_index;
+                    promises.push(function() {
+                        var percentage = parseInt( page_index * 100 / page_count, 10);
+                        Rally.getApp().setLoading("Loading time values (" + percentage + "%)");
+                        return me.loadWsapiRecords(config_clone); 
+                    });
+                });
+                CA.techservices.promise.ParallelThrottle.throttle(promises, 6, me).then({
+                        success: function(results){
+                            deferred.resolve( Ext.Array.flatten(results) );
+                        },
+                        failure: function(msg) {
+                            deferred.reject(msg);
+                        }
+                });
+            },
+            failure: function(msg) {
+                deferred.reject(msg);
+            }
+        });
+        return deferred.promise;
+    },
+    
+    getOidFromRef: function(ref) {
+        var ref_array = ref.replace(/\.js$/,'').split(/\//);
+        return ref_array[ref_array.length-1];
+    },
+    
+    fetchPortfolioItemTypes: function() {
+        var config = {
+            model: 'TypeDefinition', 
+            fetch: ["TypePath","Ordinal","Name"],
+            filters: [{property:'TypePath', operator:'contains', value:'PortfolioItem/'}],
+            sorters: [{property:'Ordinal',direction:'ASC'}]
+        };
+        
+        return TSUtilities.loadWsapiRecords(config);
+    }
+    
+});
+/**
+ * A link that pops up a version dialog box
+ */
+
+Ext.define('Rally.technicalservices.InfoLink',{
+    extend: 'Rally.ui.dialog.Dialog',
+    alias: 'widget.tsinfolink',
+    
+    /**
+     * @cfg {String} informationHtml
+     * Additional text to be displayed on the popup dialog (for exmaple,
+     * to add a description of the app's use or functionality)
+     */
+    informationHtml: null,
+    
+    /**
+     * 
+     * cfg {String} title
+     * The title for the dialog box
+     */
+    title: "Build Information",
+    
+    defaults: { padding: 5, margin: 5 },
+
+    closable: true,
+     
+    draggable: true,
+
+    autoShow: true,
+   
+    width: 350,
+    
+    informationalConfig: null,
+    
+    items: [{xtype:'container', itemId:'information' }],
+    
+    initComponent: function() {
+        var id = Ext.id(this);
+        this.title =  "<span class='icon-help'> </span>" + this.title;
+        this.callParent(arguments);
+    },
+    
+    _generateChecksum: function(string){
+        var chk = 0x12345678,
+            i;
+        string = string.replace(/var CHECKSUM = .*;/,"");
+        string = string.replace(/var BUILDER = .*;/,"");
+        string = string.replace(/\s/g,"");  //Remove all whitespace from the string.
+       
+        for (i = 0; i < string.length; i++) {
+            chk += (string.charCodeAt(i) * i);
+        }
+   
+        return chk;
+    },
+    
+    _checkChecksum: function(container) {
+        var deferred = Ext.create('Deft.Deferred');
+        var me = this;
+        
+        Ext.Ajax.request({
+            url: document.URL,
+            params: {
+                id: 1
+            },
+            success: function (response) {
+                text = response.responseText;
+                if ( CHECKSUM ) {
+                    var stored_checksum = me._generateChecksum(text);
+                    if ( CHECKSUM !== stored_checksum ) {
+                        deferred.resolve(false);
+                        return;
+                    }
+                }
+                deferred.resolve(true);
+            }
+        });
+        
+        return deferred.promise;
+    },
+    
+    _addToContainer: function(container){
+        var config = Ext.apply({
+            xtype:'container',
+            height: 200,
+            overflowY: true
+        }, this.informationalConfig);
+        
+        container.add(config);
+    },
+    
+    afterRender: function() {
+        var app = Rally.getApp();
+        
+        if ( !Ext.isEmpty( this.informationalConfig ) ) {
+            var container = this.down('#information');
+            this._addToContainer(container);
+            
+        }
+        
+        if (! app.isExternal() ) {
+            this._checkChecksum(app).then({
+                scope: this,
+                success: function(result){
+                    if ( !result ) {
+                        this.addDocked({
+                            xtype:'container',
+                            cls: 'build-info',
+                            dock: 'bottom',
+                            padding: 2,
+                            html:'<span class="icon-warning"> </span>Checksums do not match'
+                        });
+                    }
+                },
+                failure: function(msg){
+                    console.log("oops:",msg);
+                }
+            });
+        } else {
+            this.addDocked({
+                xtype:'container',
+                cls: 'build-info',
+                padding: 2,
+                dock: 'bottom',
+                html:'... Running externally'
+            });
+        }
+        this.callParent(arguments);
+    },
+    
+    beforeRender: function() {
+        var me = this;
+        this.callParent(arguments);
+
+        if (this.informationHtml) {
+            this.addDocked({
+                xtype: 'component',
+                componentCls: 'intro-panel',
+                padding: 2,
+                html: this.informationHtml,
+                doc: 'top'
+            });
+        }
+        
+        this.addDocked({
+            xtype:'container',
+            cls: 'build-info',
+            padding: 2,
+            dock:'bottom',
+            html:"This app was created by the CA AC Technical Services Team."
+        });
+        
+        if ( APP_BUILD_DATE ) {
+            this.addDocked({
+                xtype:'container',
+                cls: 'build-info',
+                padding: 2,
+                dock: 'bottom',
+                html: Ext.String.format("Build date/time: {0} ({1})",
+                    APP_BUILD_DATE,
+                    BUILDER)
+            });
+        }
+    }
+});
+
+/*
+ */
+Ext.define('Rally.technicalservices.Logger',{
+    constructor: function(config){
+        Ext.apply(this,config);
+    },
+    log: function(args){
+        var timestamp = "[ " + Ext.util.Format.date(new Date(), "Y-m-d H:i:s.u") + " ]";
+        //var output_args = arguments;
+        //output_args.unshift( [ "[ " + timestamp + " ]" ] );
+        //output_args = Ext.Array.push(output_args,arguments);
+        
+        var output_args = [];
+        output_args = Ext.Array.push(output_args,[timestamp]);
+        output_args = Ext.Array.push(output_args, Ext.Array.slice(arguments,0));
+
+        window.console && console.log.apply(console,output_args);
+    }
+
+});
+
+Ext.define('Rally.technicalservices.dependency.Settings', {
+    singleton: true,
+
+    getFields: function(config) {
+        
+        var items = [];
+        
+        items.push({
+            name: 'parentRecordType',
+            xtype: 'rallyportfolioitemtypecombobox',
+            margin: '10px 0 0 0',
+            fieldLabel: 'Record Type for Query',
+            readyEvent: 'ready' 
+        });
+        
+        items.push({
+            xtype: 'textarea',
+            fieldLabel: 'Query',
+            name: 'parentQuery',
+            anchor: '100%',
+            cls: 'query-field',
+            margin: '0 70 0 0',
+            plugins: [
+                {
+                    ptype: 'rallyhelpfield',
+                    helpId: 194
+                },
+                'rallyfieldvalidationui'
+            ],
+            validateOnBlur: false,
+            validateOnChange: false,
+            validator: function(value) {
+                try {
+                    if (value) {
+                        Rally.data.wsapi.Filter.fromQueryString(value);
+                    }
+                    return true;
+                } catch (e) {
+                    return e.message;
+                }
+            }
+        });
+        
+        return items;
+    }
+});
+Ext.define("TSDependencyByPI", {
+    extend: 'Rally.app.App',
+    componentCls: 'app',
+    logger: new Rally.technicalservices.Logger(),
+    defaults: { margin: 10 },
+    
+    stories: [],
+    
+    items: [
+        {xtype:'container',itemId:'display_box', layout: 'hbox'}
+    ],
+
+    integrationHeaders : {
+        name : "TSDependencyByPI"
+    },
+    
+    config: {
+        defaultSettings: {
+            parentRecordType: null,
+            parentQuery: '( ObjectID > 0 )'
+        }
+    },
+                        
+    launch: function() {
+        var me = this;
+        if ( Ext.isEmpty( this.getSetting('parentRecordType') ) || Ext.isEmpty( this.getSetting('parentQuery') ) ) {
+            Ext.Msg.alert("","Please use the Edit App Settings gear menu item to choose an ancestor record type and query");
+            return;
+        }
+        
+        TSUtilities.fetchPortfolioItemTypes().then({
+            scope: this,
+            success: function(results) {
+                this.pi_types = results;
+                this._updateData();
+            }
+        });
+
+        
+    },
+
+    _updateData: function() {
+        var me = this;
+        this.stories = [];
+        
+        Deft.Chain.pipeline([
+            me._getPortfolioItems,
+            me._getDescendantStoriesWithDependencies
+        ],this).then({
+            scope: this,
+            success: function(stories){
+                me.logger.log('Results:', stories);
+                var iterations = this._collectByIteration(stories);
+                
+                this._makeIterationBoxes(iterations);
+            },
+            failure: function(msg) {
+                Ext.Msg.alert('',msg);
+            }
+        }).always(function() { me.setLoading(false); });
+    },
+    
+    _getPortfolioItems: function() {
+        this.setLoading('Fetching items that match the query...');
+        
+        var filters = Rally.data.wsapi.Filter.fromQueryString(this.getSetting('parentQuery'));
+        var model = this._getPITypePathFromTypeDef(this.getSetting('parentRecordType'));
+                
+        var config = {
+            model: model,
+            filters: filters,
+            fetch: ['ObjectID','FormattedID']
+        };
+        
+        return TSUtilities.loadWsapiRecords(config);
+        
+    },
+    
+    _getDescendantStoriesWithDependencies: function(portfolio_items) {
+        this.setLoading('Fetching stories...');
+
+        var me = this,
+            deferred = Ext.create('Deft.Deferred'),
+            ascendant_ordinal = null,
+            oid = TSUtilities.getOidFromRef(this.getSetting('parentRecordType'));
+       
+        Ext.Array.each(this.pi_types, function(pi_type){
+            if ( "" + pi_type.get('ObjectID') == "" + oid ) {
+                ascendant_ordinal = pi_type.get('Ordinal');
+            }
+        });
+                
+        var lowest_level_pi_name = this.pi_types[0].get('Name');
+        var field_prefix = lowest_level_pi_name;
+
+        for ( var i=1; i<=ascendant_ordinal; i++ ) {
+            field_prefix = field_prefix + ".Parent";
+        }
+        
+        var pi_filter_array = Ext.Array.map(portfolio_items, function(pi){
+            return { property:field_prefix + '.ObjectID',value:pi.get('ObjectID') };
+        });
+        
+        var pi_filters = Rally.data.wsapi.Filter.or(pi_filter_array);
+        var dependency_filter = Ext.create('Rally.data.wsapi.Filter',{ property:'Predecessors.ObjectID',operator:'>',value:0 });
+        
+        var filters = dependency_filter.and(pi_filters);
+        
+        var config = {
+            model: 'UserStory',
+            fetch: ['ObjectID','FormattedID','Name','Predecessors','Iteration','ScheduleState','Blocked',
+                'StartDate', 'EndDate', 'Project'],
+            filters: filters,
+            limit: Infinity
+        };
+        
+        TSUtilities.loadWsapiRecords(config).then({
+            scope: this,
+            success: function(stories) {
+                if ( stories.length === 0 ) {
+                    deferred.resolve([]);
+                    return;
+                }
+                                
+                this.setLoading('Fetching predecessor information...');
+                
+                var promises = Ext.Array.map(stories, function(story){
+                    return function() { return me._fetchPredecessorsFor(story); }
+                }, me);
+                
+                Deft.Chain.sequence(promises).then({
+                    success: function(results) {
+                        deferred.resolve(results);
+                    },
+                    failure: function(msg) {
+                        deferred.reject(msg);
+                    }
+                }).always(function(){ me.setLoading(false); });
+                
+            },
+            failure: function(msg) {
+                deferred.reject(msg);
+            }
+        });
+        
+        return deferred.promise;
+        
+    },
+    
+    _fetchPredecessorsFor: function(story) {
+        var deferred = Ext.create('Deft.Deferred');
+        story.getCollection('Predecessors').load({
+            fetch: ['FormattedID', 'Name', 'ScheduleState','Iteration','Blocked',
+                'StartDate','EndDate','Project'],
+            callback: function(records, operation, success) {
+                story.set('__Predecessors', records);
+                deferred.resolve(story);
+            }
+        });
+
+        return deferred.promise;
+    },
+    
+    _collectByIteration: function(stories) {
+        var stories_by_iteration = {};
+        Ext.Array.each(stories, function(story){
+            var iteration = story.get('Iteration');
+            var iteration_start = iteration.StartDate;
+            if ( Ext.isEmpty(stories_by_iteration[iteration_start]) ) {
+                stories_by_iteration[iteration_start] = {
+                    iteration: iteration,
+                    stories: []
+                };
+            }
+            
+            stories_by_iteration[iteration_start].stories.push(story);
+        });
+        
+        return stories_by_iteration;
+    },
+    
+    _makeIterationBoxes: function(iterations) {
+        this.logger.log('iterations', iterations);
+        var container = this.down('#display_box');
+        
+        var iteration_dates_in_order = Ext.Object.getKeys(iterations).sort();
+        
+        Ext.Array.each(iteration_dates_in_order, function(iteration_date) {
+            var iteration_object = iterations[iteration_date];
+            
+            var iteration = iteration_object.iteration;
+            var stories = iteration_object.stories;
+            
+            var box = container.add({
+                xtype:'container',
+                border: 1,
+                style: {borderColor:'#000000', borderStyle:'solid', borderWidth:'1px'},
+                padding: 5,
+                margin: 10,
+                width: 300,
+                height: 400,
+                overflowY: 'auto'
+            });
+            
+            var header = box.add({
+                xtype:'container',
+                html: iteration.Name + '<br/>' + iteration.StartDate.replace(/T.*$/,'') + '<hr/>'
+            });
+            
+            var summary = box.add({
+                xtype:'container'
+            });
+            
+            Ext.Array.each(stories, function(story){
+                summary.add({
+                    xtype:'container',
+                    html: Ext.String.format("{0} {1} - {2}",
+                        story.get('Project')._refObjectName,
+                        story.get('FormattedID'),
+                        story.get("_refObjectName")
+                    )
+                });
+                
+                Ext.Array.each(story.get('__Predecessors'), function(predecessor){
+                    
+                    var schedule_state_box = Ext.String.format("<div class='state-legend'>{0}</div>",
+                        predecessor.get('ScheduleState').charAt(0)
+                    );
+                    
+                    var status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'> Not yet scheduled";
+                    
+                    if ( !Ext.isEmpty(predecessor.get('Iteration') ) ) {
+                        var story_end = iteration.EndDate;
+                        var pred_end = predecessor.get('Iteration').EndDate;
+                        
+                        if ( pred_end >= story_end ) {
+                            status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'>  Scheduled for " + pred_end.replace(/T.*$/,'');
+                        } else { 
+                            status_message = "Scheduled for " + pred_end.replace(/T.*$/,'');
+                        }
+                        
+                    }
+                    
+                    console.log(schedule_state_box, predecessor);
+                    
+                    summary.add({
+                        xtype:'container',
+                        margin: '2 2 5 10',
+                        html: Ext.String.format('{0} Waiting on <b>{1}</b> for <br/>{2}:{3}',
+                            schedule_state_box,
+                            predecessor.get('Project')._refObjectName,
+                            predecessor.get('FormattedID'),
+                            predecessor.get('Name')
+                        )
+                    });
+                    
+                    summary.add({
+                        xtype:'container',
+                        margin: '2 2 5 30',
+                        html: status_message
+                    });
+                    
+                });
+            });
+            
+        });
+    },
+    
+    /*
+     * type def looks like "/typedefinition/1324342"
+     */
+    _getPITypePathFromTypeDef: function(typedef) {
+        var oid = TSUtilities.getOidFromRef(typedef);
+        
+        var model = "PortfolioItem";
+        Ext.Array.each(this.pi_types, function(type){
+            if ( "" + type.get('ObjectID') == "" + oid ) {
+                model = type.get('TypePath');
+            }
+        });
+        return model;
+    },
+    
+    getOptions: function() {
+        return [
+            {
+                text: 'About...',
+                handler: this._launchInfo,
+                scope: this
+            }
+        ];
+    },
+    
+    _launchInfo: function() {
+        if ( this.about_dialog ) { this.about_dialog.destroy(); }
+        this.about_dialog = Ext.create('Rally.technicalservices.InfoLink',{});
+    },
+    
+    isExternal: function(){
+        return typeof(this.getAppId()) == 'undefined';
+    },
+    
+    getSettingsFields: function() {
+        return Rally.technicalservices.dependency.Settings.getFields();
+    }
+});
+
+            
+               Rally.launchApp('TSDependencyByPI', {
+                   name: 'Dependency Dashboard by Portfolio Item'
+               });
+        });
+    </script>
+    
+    <style type="text/css">
+
+.app {
+}
+.tsinfolink {
+    position:absolute;
+    right:0px;
+    width: 14px;
+    height: 14px;
+    border-radius: 7px;
+    text-align: center;
+    color: white;
+    background: #C0C0C0;
+    border-style: solid;
+    border-width: 1px;
+    margin-top: 25px;
+    margin-right: 5px;
+    cursor: pointer;
+}
+
+.state-legend {
+    background: #006600 none repeat scroll 0%;
+    border: 1px solid #DDDDDD;
+    color: #FFFFFF;
+    cursor: default;
+    float: left;
+    height: 18px;
+    line-height: 18px;
+    margin-right: 2px;
+    text-align: center;
+    width: 18px;
+}
+    </style>
+
+</head>
+<body></body>
+</html>

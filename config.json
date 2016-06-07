@@ -1,0 +1,5 @@
+{
+    "name": "Dependency Dashboard by Portfolio Item",
+    "sdk": "2.1",
+    "className": "TSDependencyByPI"
+}
