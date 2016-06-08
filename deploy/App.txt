@@ -3,12 +3,12 @@
 <head>
     <title>Dependency Dashboard by Portfolio Item</title>
     <!--  (c) 2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Wed Jun 08 2016 15:56:31 GMT-0700 (PDT) -->
+    <!--  Build Date: Wed Jun 08 2016 15:59:09 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Jun 08 2016 15:56:31 GMT-0700 (PDT)";
+        var APP_BUILD_DATE = "Wed Jun 08 2016 15:59:09 GMT-0700 (PDT)";
         var BUILDER = "jmartin";
-        var CHECKSUM = 9060593885;
+        var CHECKSUM = 9066120971;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -581,7 +581,7 @@ Ext.define("TSDependencyByPI", {
                 summary.add({
                     xtype:'container',
                     cls: 'story-header',
-                    html: Ext.String.format("{0} {1} - {2}",
+                    html: Ext.String.format("{0}<br/>{1}: {2}",
                         story.get('Project')._refObjectName,
                         story.get('FormattedID'),
                         story.get("_refObjectName")

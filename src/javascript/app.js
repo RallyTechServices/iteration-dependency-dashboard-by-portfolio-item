@@ -245,7 +245,7 @@ Ext.define("TSDependencyByPI", {
                 summary.add({
                     xtype:'container',
                     cls: 'story-header',
-                    html: Ext.String.format("{0} {1} - {2}",
+                    html: Ext.String.format("{0}<br/>{1}: {2}",
                         story.get('Project')._refObjectName,
                         story.get('FormattedID'),
                         story.get("_refObjectName")
