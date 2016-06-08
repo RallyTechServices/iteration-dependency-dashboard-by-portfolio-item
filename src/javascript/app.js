@@ -218,10 +218,23 @@ Ext.define("TSDependencyByPI", {
             });
             
             var iteration_start = iteration.StartDate || "--";
+            var iteration_end = iteration.EndDate || "--";
+            
+            var iteration_date_string = Ext.String.format("{0} to {1}",
+                iteration_start.replace(/T.*$/,''),
+                iteration_end.replace(/T.*$/,'')
+            );
+            
+            if ( iteration_start == "--" ) {
+                iteration_date_string = "--";
+            }
             
             var header = box.add({
                 xtype:'container',
-                html: iteration.Name + '<br/>' + iteration_start.replace(/T.*$/,'') + '<hr/>'
+                html: Ext.String.format("<span class='iteration-header'>{0}</span><br/>{1}<hr/>",
+                    iteration.Name,
+                    iteration_date_string
+                )
             });
             
             var summary = box.add({

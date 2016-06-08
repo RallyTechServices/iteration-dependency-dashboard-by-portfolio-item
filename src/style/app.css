@@ -30,5 +30,9 @@
 }
 
 .story-header {
-    font: bold 12px Arial, sans-serif;
+    font: bold 11px Arial, sans-serif;
+}
+
+.iteration-header{
+    font: bold 14px Arial, sans-serif;
 }
