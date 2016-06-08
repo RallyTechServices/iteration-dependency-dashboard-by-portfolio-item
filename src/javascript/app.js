@@ -42,6 +42,7 @@ Ext.define("TSDependencyByPI", {
     _updateData: function() {
         var me = this;
         this.stories = [];
+        this.down('#display_box').removeAll();
         
         Deft.Chain.pipeline([
             me._getPortfolioItems,
@@ -50,6 +51,7 @@ Ext.define("TSDependencyByPI", {
             scope: this,
             success: function(stories){
                 me.logger.log('Results:', stories);
+
                 var iterations = this._collectByIteration(stories);
                 
                 this._makeIterationBoxes(iterations);
@@ -79,6 +81,10 @@ Ext.define("TSDependencyByPI", {
     _getDescendantStoriesWithDependencies: function(portfolio_items) {
         this.setLoading('Fetching stories...');
 
+        if ( portfolio_items.length === 0 ) {
+            this.down('#display_box').add({xtype:'container',html:'No items found'});
+            return;
+        }
         var me = this,
             deferred = Ext.create('Deft.Deferred'),
             ascendant_ordinal = null,
@@ -111,7 +117,10 @@ Ext.define("TSDependencyByPI", {
             fetch: ['ObjectID','FormattedID','Name','Predecessors','Iteration','ScheduleState','Blocked',
                 'StartDate', 'EndDate', 'Project'],
             filters: filters,
-            limit: Infinity
+            limit: Infinity,
+            context: {
+                project: null
+            }
         };
         
         TSUtilities.loadWsapiRecords(config).then({
@@ -249,9 +258,7 @@ Ext.define("TSDependencyByPI", {
                         }
                         
                     }
-                    
-                    console.log(schedule_state_box, predecessor);
-                    
+                                        
                     summary.add({
                         xtype:'container',
                         margin: '2 2 5 10',

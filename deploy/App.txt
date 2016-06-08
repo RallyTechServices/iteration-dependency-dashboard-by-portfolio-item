@@ -3,12 +3,12 @@
 <head>
     <title>Dependency Dashboard by Portfolio Item</title>
     <!--  (c) 2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Mon Jun 06 2016 19:15:59 GMT-0700 (PDT) -->
+    <!--  Build Date: Wed Jun 08 2016 15:48:59 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Mon Jun 06 2016 19:15:59 GMT-0700 (PDT)";
+        var APP_BUILD_DATE = "Wed Jun 08 2016 15:48:59 GMT-0700 (PDT)";
         var BUILDER = "jmartin";
-        var CHECKSUM = 8505949054;
+        var CHECKSUM = 8662937338;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -378,6 +378,7 @@ Ext.define("TSDependencyByPI", {
     _updateData: function() {
         var me = this;
         this.stories = [];
+        this.down('#display_box').removeAll();
         
         Deft.Chain.pipeline([
             me._getPortfolioItems,
@@ -386,6 +387,7 @@ Ext.define("TSDependencyByPI", {
             scope: this,
             success: function(stories){
                 me.logger.log('Results:', stories);
+
                 var iterations = this._collectByIteration(stories);
                 
                 this._makeIterationBoxes(iterations);
@@ -415,6 +417,10 @@ Ext.define("TSDependencyByPI", {
     _getDescendantStoriesWithDependencies: function(portfolio_items) {
         this.setLoading('Fetching stories...');
 
+        if ( portfolio_items.length === 0 ) {
+            this.down('#display_box').add({xtype:'container',html:'No items found'});
+            return;
+        }
         var me = this,
             deferred = Ext.create('Deft.Deferred'),
             ascendant_ordinal = null,
@@ -447,7 +453,10 @@ Ext.define("TSDependencyByPI", {
             fetch: ['ObjectID','FormattedID','Name','Predecessors','Iteration','ScheduleState','Blocked',
                 'StartDate', 'EndDate', 'Project'],
             filters: filters,
-            limit: Infinity
+            limit: Infinity,
+            context: {
+                project: null
+            }
         };
         
         TSUtilities.loadWsapiRecords(config).then({
@@ -585,9 +594,7 @@ Ext.define("TSDependencyByPI", {
                         }
                         
                     }
-                    
-                    console.log(schedule_state_box, predecessor);
-                    
+                                        
                     summary.add({
                         xtype:'container',
                         margin: '2 2 5 10',
