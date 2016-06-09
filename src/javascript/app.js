@@ -35,8 +35,6 @@ Ext.define("TSDependencyByPI", {
                 this._updateData();
             }
         });
-
-        
     },
 
     _updateData: function() {
@@ -46,11 +44,11 @@ Ext.define("TSDependencyByPI", {
         
         Deft.Chain.pipeline([
             me._getPortfolioItems,
-            me._getDescendantStoriesWithDependencies
+            me._getDescendantStoriesWithDependencies,
+            me._getAscendantPIs
         ],this).then({
             scope: this,
             success: function(stories){
-                stories = Ext.Array.unique(stories);
                 
                 var iterations = this._collectByIteration(stories);
                 
@@ -118,7 +116,7 @@ Ext.define("TSDependencyByPI", {
         var config = {
             model: 'UserStory',
             fetch: ['ObjectID','FormattedID','Name','Predecessors','Successors','Iteration','ScheduleState','Blocked',
-                'StartDate', 'EndDate', 'Project'],
+                'StartDate', 'EndDate', 'Project',lowest_level_pi_name,'Parent'],
             filters: filters,
             limit: Infinity,
             context: {
@@ -145,7 +143,7 @@ Ext.define("TSDependencyByPI", {
                 
                 Deft.Chain.sequence(promises).then({
                     success: function(results) {
-                        deferred.resolve(results);
+                        deferred.resolve( Ext.Array.unique(stories) );
                     },
                     failure: function(msg) {
                         deferred.reject(msg);
@@ -160,6 +158,112 @@ Ext.define("TSDependencyByPI", {
         
         return deferred.promise;
         
+    },
+    
+    _getAscendantPIs: function(stories) {
+        this.logger.log('_getAscendantPIs',stories);
+        var deferred = Ext.create('Deft.Deferred');
+        
+        this.setLoading('Fetch Hierarchy...');
+        
+        var stories_by_oid = {};
+        Ext.Array.each(stories, function(story){
+            stories_by_oid[parseInt(story.get('ObjectID'),10)] = story;
+        });
+        
+        //lookback isn't working tonight
+        var lowest_level_pi_name = this.pi_types[0].get('Name');
+        var grandparent_filters = Ext.Array.map(stories, function(story){
+            var parent = story.get(lowest_level_pi_name).Parent;
+            story.set('__Parent', story.get(lowest_level_pi_name));
+            
+            if ( parent ) {
+                story.set('__Grandparent',parent);
+                return {property:'ObjectID',value:parent.ObjectID};
+            }
+            return {property:'ObjectID',value:-1};
+        });
+        
+        var unique_grandparent_filters = Ext.Array.unique(grandparent_filters);
+        
+        var filters = Rally.data.wsapi.Filter.or(unique_grandparent_filters);
+        
+        var config = {
+            model: this.pi_types[1].get('TypePath'),
+            limit: Infinity,
+            filters: filters,
+            fetch: ['FormattedID','Name','Parent']
+        };
+        
+        TSUtilities.loadWsapiRecords(config).then({
+            success: function(grandparents) {
+                console.log('grandparents', grandparents);
+                var grandparents_by_oid = {};
+                Ext.Array.each(grandparents, function(grandparent){
+                    grandparents_by_oid[grandparent.get('ObjectID')] = grandparent;
+                });
+                
+                Ext.Array.each(stories, function(story){
+                    var grandparent = story.get('__Grandparent');
+                    if ( grandparent ) {
+                        var grandparent_oid = grandparent.ObjectID;
+                        if (grandparents_by_oid[grandparent_oid] && grandparents_by_oid[grandparent_oid].get('Parent')) {
+                            story.set('__Greatgrandparent',grandparents_by_oid[grandparent_oid].get('Parent'));
+                        }
+                    }
+                });
+                
+                deferred.resolve(stories);
+            },
+            failure: function(msg) {
+                deferred.reject(msg);
+            }
+        });
+        
+//        this._getHierarchyListFromLookback(stories_by_oid).then({
+//            success:function(results) {
+//                console.log('--', results);
+//                //return stories;
+//            },
+//            failure: function(msg) {
+//                deferred.reject(msg);
+//            }
+//        });
+        
+        
+        return deferred.promise;
+    },
+    
+    _getHierarchyListFromLookback: function(stories_by_oid) {
+        var deferred = Ext.create('Deft.Deferred');
+        oids = Ext.Object.getKeys(stories_by_oid);
+        
+        var config = {
+            fetch: ['_ItemHierarchy','ObjectID'],
+            filters: [
+                {property:'ObjectID',operator:'in',value:oids},
+                {property:'__At',value:'current'}
+            ]
+        };
+        
+        console.log(config);
+        
+//        TSUtilities.loadLookbackRecords().then({
+//            success: function(snapshots){
+//                Ext.Array.each(snapshots, function(snapshot){
+//                    var oid = snapshot.get('ObjectID');
+//                    stories_by_oid[oid].set('_ItemHierarchy', snapshot.get('_ItemHierarchy'));
+//                });
+//                
+//                deferred.resolve(stories_by_oid);
+//            },
+//            failure: function(msg) {
+//                deferred.reject(msg);
+//            }
+//            
+//        });
+        
+        return deferred.promise;
     },
     
     _fetchPredecessorsFor: function(story) {
@@ -269,13 +373,40 @@ Ext.define("TSDependencyByPI", {
         });
         
         Ext.Array.each(stories, function(story){
+            var hierarchy_string = "";
+            
+            var level = "__Parent";
+            if ( story.get(level) ) {
+                hierarchy_string = Ext.String.format("{0}: {1}",
+                    story.get(level).FormattedID,
+                    story.get(level).Name
+                );
+            }
+            
+            var level = "__Grandparent";
+            if ( story.get(level) ) {
+                hierarchy_string = hierarchy_string + " > " + Ext.String.format("{0}: {1}",
+                    story.get(level).FormattedID,
+                    story.get(level).Name
+                );
+            }
+            
+            var level = "__Greatgrandparent";
+            if ( story.get(level) ) {
+                hierarchy_string = hierarchy_string + " > " + Ext.String.format("{0}: {1}",
+                    story.get(level).FormattedID,
+                    story.get(level).Name
+                );
+            }
+            
             summary.add({
                 xtype:'container',
                 cls: 'story-header',
-                html: Ext.String.format("{0}<br/>{1}: {2}",
+                html: Ext.String.format("{0}<br/>{1}: {2}<br/>{3}",
                     story.get('Project')._refObjectName,
                     story.get('FormattedID'),
-                    story.get("_refObjectName")
+                    story.get("_refObjectName"),
+                    hierarchy_string
                 )
             });
             

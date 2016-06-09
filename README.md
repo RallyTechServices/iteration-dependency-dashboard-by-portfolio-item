@@ -1,6 +1,10 @@
 #Dependency Dashboard by Portfolio Item
 
+This app allows for the selection of a portfolio item by query.  The stories that belong to that portfolio item and have a dependency relationship are organized into panels for the iterations that contain them.  The panels show the stories with their predecessors and successors along with warnings about the scheduling of the predecessors and successors.
+
 ## Development Notes
+
+Assumptions: This expects there to be three levels of PI.
 
 ### First Load
 
