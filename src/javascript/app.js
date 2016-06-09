@@ -164,6 +164,9 @@ Ext.define("TSDependencyByPI", {
         this.logger.log('_getAscendantPIs',stories);
         var deferred = Ext.create('Deft.Deferred');
         
+        if ( Ext.isEmpty(stories) || stories.length === 0 ) {
+            return stories;
+        }
         this.setLoading('Fetch Hierarchy...');
         
         var stories_by_oid = {};
