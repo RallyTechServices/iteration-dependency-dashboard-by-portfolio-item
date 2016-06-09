@@ -50,8 +50,8 @@ Ext.define("TSDependencyByPI", {
         ],this).then({
             scope: this,
             success: function(stories){
-                me.logger.log('Results:', stories);
-
+                stories = Ext.Array.unique(stories);
+                
                 var iterations = this._collectByIteration(stories);
                 
                 this._makeIterationBoxes(iterations);
@@ -108,13 +108,16 @@ Ext.define("TSDependencyByPI", {
         });
         
         var pi_filters = Rally.data.wsapi.Filter.or(pi_filter_array);
-        var dependency_filter = Ext.create('Rally.data.wsapi.Filter',{ property:'Predecessors.ObjectID',operator:'>',value:0 });
+        var dependency_filter = Rally.data.wsapi.Filter.or([
+            { property:'Predecessors.ObjectID',operator:'>',value:0 },
+            { property:'Successors.ObjectID',operator:'>',value:0 }
+        ]);
         
         var filters = dependency_filter.and(pi_filters);
         
         var config = {
             model: 'UserStory',
-            fetch: ['ObjectID','FormattedID','Name','Predecessors','Iteration','ScheduleState','Blocked',
+            fetch: ['ObjectID','FormattedID','Name','Predecessors','Successors','Iteration','ScheduleState','Blocked',
                 'StartDate', 'EndDate', 'Project'],
             filters: filters,
             limit: Infinity,
@@ -130,11 +133,14 @@ Ext.define("TSDependencyByPI", {
                     deferred.resolve([]);
                     return;
                 }
-                                
-                this.setLoading('Fetching predecessor information...');
                 
-                var promises = Ext.Array.map(stories, function(story){
-                    return function() { return me._fetchPredecessorsFor(story); }
+                this.setLoading('Fetching dependency information...');
+                
+                var promises = [];
+                
+                Ext.Array.each(stories, function(story){
+                    promises.push(function() { return me._fetchPredecessorsFor(story); });
+                    promises.push(function() { return me._fetchSuccessorsFor(story); });
                 }, me);
                 
                 Deft.Chain.sequence(promises).then({
@@ -158,11 +164,27 @@ Ext.define("TSDependencyByPI", {
     
     _fetchPredecessorsFor: function(story) {
         var deferred = Ext.create('Deft.Deferred');
+        
         story.getCollection('Predecessors').load({
             fetch: ['FormattedID', 'Name', 'ScheduleState','Iteration','Blocked',
                 'StartDate','EndDate','Project'],
             callback: function(records, operation, success) {
                 story.set('__Predecessors', records);
+                deferred.resolve(story);
+            }
+        });
+
+        return deferred.promise;
+    },
+    
+    _fetchSuccessorsFor: function(story) {
+        var deferred = Ext.create('Deft.Deferred');
+
+        story.getCollection('Successors').load({
+            fetch: ['FormattedID', 'Name', 'ScheduleState','Iteration','Blocked',
+                'StartDate','EndDate','Project'],
+            callback: function(records, operation, success) {
+                story.set('__Successors', records);
                 deferred.resolve(story);
             }
         });
@@ -202,97 +224,146 @@ Ext.define("TSDependencyByPI", {
         
         Ext.Array.each(iteration_dates_in_order, function(iteration_date) {
             var iteration_object = iterations[iteration_date];
-            
-            var iteration = iteration_object.iteration;
-            var stories = iteration_object.stories;
-            
-            var box = container.add({
+            this._addIterationBox(container,iteration_object);
+        },this);
+        
+    },
+    
+    _addIterationBox: function(container,iteration_object) {
+        var iteration = iteration_object.iteration;
+        var stories = iteration_object.stories;
+        
+        var box = container.add({
+            xtype:'container',
+            border: 1,
+            style: {borderColor:'#000000', borderStyle:'solid', borderWidth:'1px'},
+            padding: 5,
+            margin: 10,
+            width: 300,
+            height: 400,
+            overflowY: 'auto'
+        });
+        
+        var iteration_start = iteration.StartDate || "--";
+        var iteration_end = iteration.EndDate || "--";
+        
+        var iteration_date_string = Ext.String.format("{0} to {1}",
+            iteration_start.replace(/T.*$/,''),
+            iteration_end.replace(/T.*$/,'')
+        );
+        
+        if ( iteration_start == "--" ) {
+            iteration_date_string = "--";
+        }
+        
+        var header = box.add({
+            xtype:'container',
+            html: Ext.String.format("<span class='iteration-header'>{0}</span><br/>{1}<hr/>",
+                iteration.Name,
+                iteration_date_string
+            )
+        });
+        
+        var summary = box.add({
+            xtype:'container'
+        });
+        
+        Ext.Array.each(stories, function(story){
+            summary.add({
                 xtype:'container',
-                border: 1,
-                style: {borderColor:'#000000', borderStyle:'solid', borderWidth:'1px'},
-                padding: 5,
-                margin: 10,
-                width: 300,
-                height: 400,
-                overflowY: 'auto'
-            });
-            
-            var iteration_start = iteration.StartDate || "--";
-            var iteration_end = iteration.EndDate || "--";
-            
-            var iteration_date_string = Ext.String.format("{0} to {1}",
-                iteration_start.replace(/T.*$/,''),
-                iteration_end.replace(/T.*$/,'')
-            );
-            
-            if ( iteration_start == "--" ) {
-                iteration_date_string = "--";
-            }
-            
-            var header = box.add({
-                xtype:'container',
-                html: Ext.String.format("<span class='iteration-header'>{0}</span><br/>{1}<hr/>",
-                    iteration.Name,
-                    iteration_date_string
+                cls: 'story-header',
+                html: Ext.String.format("{0}<br/>{1}: {2}",
+                    story.get('Project')._refObjectName,
+                    story.get('FormattedID'),
+                    story.get("_refObjectName")
                 )
             });
             
-            var summary = box.add({
-                xtype:'container'
-            });
-            
-            Ext.Array.each(stories, function(story){
+            Ext.Array.each(story.get('__Predecessors'), function(predecessor){
+                
+                var schedule_state_box = Ext.String.format("<div class='state-legend'>{0}</div>",
+                    predecessor.get('ScheduleState').charAt(0)
+                );
+                
+                var status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'> Not yet scheduled";
+                
+                if ( !Ext.isEmpty(predecessor.get('Iteration') ) ) {
+                    var story_end = iteration.EndDate;
+                    var dependency_end = predecessor.get('Iteration').EndDate;
+                    
+                    if ( dependency_end >= story_end && !Ext.isEmpty(story_end) ) {
+                        status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'>  Scheduled for " + dependency_end.replace(/T.*$/,'');
+                    } else { 
+                        status_message = "Scheduled for " + dependency_end.replace(/T.*$/,'');
+                    }
+                    
+                }
+                                    
                 summary.add({
                     xtype:'container',
-                    cls: 'story-header',
-                    html: Ext.String.format("{0}<br/>{1}: {2}",
-                        story.get('Project')._refObjectName,
-                        story.get('FormattedID'),
-                        story.get("_refObjectName")
+                    margin: '2 2 5 10',
+                    html: Ext.String.format('{0} Waiting on <b>{1}</b> for <br/>{2}:{3}',
+                        schedule_state_box,
+                        predecessor.get('Project')._refObjectName,
+                        predecessor.get('FormattedID'),
+                        predecessor.get('Name')
                     )
                 });
                 
-                Ext.Array.each(story.get('__Predecessors'), function(predecessor){
-                    
-                    var schedule_state_box = Ext.String.format("<div class='state-legend'>{0}</div>",
-                        predecessor.get('ScheduleState').charAt(0)
-                    );
-                    
-                    var status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'> Not yet scheduled";
-                    
-                    if ( !Ext.isEmpty(predecessor.get('Iteration') ) ) {
-                        var story_end = iteration.EndDate;
-                        var pred_end = predecessor.get('Iteration').EndDate;
-                        
-                        if ( pred_end >= story_end && !Ext.isEmpty(story_end) ) {
-                            status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'>  Scheduled for " + pred_end.replace(/T.*$/,'');
-                        } else { 
-                            status_message = "Scheduled for " + pred_end.replace(/T.*$/,'');
-                        }
-                        
-                    }
-                                        
-                    summary.add({
-                        xtype:'container',
-                        margin: '2 2 5 10',
-                        html: Ext.String.format('{0} Waiting on <b>{1}</b> for <br/>{2}:{3}',
-                            schedule_state_box,
-                            predecessor.get('Project')._refObjectName,
-                            predecessor.get('FormattedID'),
-                            predecessor.get('Name')
-                        )
-                    });
-                    
-                    summary.add({
-                        xtype:'container',
-                        margin: '2 2 5 30',
-                        html: status_message
-                    });
-                    
+                summary.add({
+                    xtype:'container',
+                    margin: '2 2 5 30',
+                    html: status_message
                 });
+                
+            });
+
+            if ( !Ext.isEmpty(story.get("__Predecessors")) && story.get("__Predecessors").length > 0 &&
+                !Ext.isEmpty(story.get("__Successors")) && story.get("__Successors").length > 0  ) {
+                    summary.add({ xtype:'container', html: "<hr/>" });
+            }
+
+            Ext.Array.each(story.get('__Successors'), function(successor){
+                                
+                var schedule_state_box = Ext.String.format("<div class='state-legend'>{0}</div>",
+                    successor.get('ScheduleState').charAt(0)
+                );
+                
+                var status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'> Not yet scheduled";
+                
+                if ( !Ext.isEmpty(successor.get('Iteration') ) ) {
+                    var story_end = iteration.EndDate;
+                    var dependency_end = successor.get('Iteration').EndDate;
+                    
+                    if ( dependency_end >= story_end && !Ext.isEmpty(story_end) ) {
+                        status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'>  Scheduled for " + dependency_end.replace(/T.*$/,'');
+                    } else { 
+                        status_message = "Scheduled for " + dependency_end.replace(/T.*$/,'');
+                    }
+                    
+                }
+                                    
+                summary.add({
+                    xtype:'container',
+                    margin: '2 2 5 10',
+                    html: Ext.String.format('{0} Needed by <b>{1}</b> for <br/>{2}:{3}',
+                        schedule_state_box,
+                        successor.get('Project')._refObjectName,
+                        successor.get('FormattedID'),
+                        successor.get('Name')
+                    )
+                });
+                
+                summary.add({
+                    xtype:'container',
+                    margin: '2 2 5 30',
+                    html: status_message
+                });
+                
             });
             
         });
+            
     },
     
     /*
