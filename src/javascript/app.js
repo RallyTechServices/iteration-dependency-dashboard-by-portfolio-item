@@ -7,7 +7,7 @@ Ext.define("TSDependencyByPI", {
     stories: [],
     
     items: [
-        {xtype:'container',itemId:'display_box', layout: 'hbox'}
+        {xtype:'container',itemId:'display_box', overflowY: 'auto', layout: 'column'}
     ],
 
     integrationHeaders : {
