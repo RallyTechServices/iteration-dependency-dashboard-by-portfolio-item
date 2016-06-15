@@ -223,17 +223,6 @@ Ext.define("TSDependencyByPI", {
             }
         });
         
-//        this._getHierarchyListFromLookback(stories_by_oid).then({
-//            success:function(results) {
-//                console.log('--', results);
-//                //return stories;
-//            },
-//            failure: function(msg) {
-//                deferred.reject(msg);
-//            }
-//        });
-        
-        
         return deferred.promise;
     },
     
@@ -380,7 +369,8 @@ Ext.define("TSDependencyByPI", {
             
             var level = "__Parent";
             if ( story.get(level) ) {
-                hierarchy_string = Ext.String.format("{0}: {1}",
+                hierarchy_string = Ext.String.format("<a href='{0}' target='_top'>{1}</a>: {2}",
+                    Rally.nav.Manager.getDetailUrl(story.get(level)),
                     story.get(level).FormattedID,
                     story.get(level).Name
                 );
@@ -388,7 +378,8 @@ Ext.define("TSDependencyByPI", {
             
             var level = "__Grandparent";
             if ( story.get(level) ) {
-                hierarchy_string = hierarchy_string + " > " + Ext.String.format("{0}: {1}",
+                hierarchy_string = hierarchy_string + " > " + Ext.String.format("<a href='{0}' target='_top'>{1}</a>: {2}",
+                    Rally.nav.Manager.getDetailUrl(story.get(level)),
                     story.get(level).FormattedID,
                     story.get(level).Name
                 );
@@ -396,7 +387,8 @@ Ext.define("TSDependencyByPI", {
             
             var level = "__Greatgrandparent";
             if ( story.get(level) ) {
-                hierarchy_string = hierarchy_string + " > " + Ext.String.format("{0}: {1}",
+                hierarchy_string = hierarchy_string + " > " + Ext.String.format("<a href='{0}' target='_top'>{1}</a>: {2}",
+                    Rally.nav.Manager.getDetailUrl(story.get(level)),
                     story.get(level).FormattedID,
                     story.get(level).Name
                 );
@@ -405,8 +397,9 @@ Ext.define("TSDependencyByPI", {
             summary.add({
                 xtype:'container',
                 cls: 'story-header',
-                html: Ext.String.format("{0}<br/>{1}: {2}<br/>{3}",
+                html: Ext.String.format("{0}<br/><a href='{1}' target='_top'>{2}</a>: {3}<br/>{4}",
                     story.get('Project')._refObjectName,
+                    Rally.nav.Manager.getDetailUrl(story),
                     story.get('FormattedID'),
                     story.get("_refObjectName"),
                     hierarchy_string
@@ -436,9 +429,10 @@ Ext.define("TSDependencyByPI", {
                 summary.add({
                     xtype:'container',
                     margin: '2 2 5 10',
-                    html: Ext.String.format('{0} Waiting on <b>{1}</b> for <br/>{2}:{3}',
+                    html: Ext.String.format("{0} Waiting on <b>{1}</b> for <br/><a href='{2}' target='_top'>{3}</a>:{4}",
                         schedule_state_box,
                         predecessor.get('Project')._refObjectName,
+                        Rally.nav.Manager.getDetailUrl(predecessor),
                         predecessor.get('FormattedID'),
                         predecessor.get('Name')
                     )
@@ -480,9 +474,10 @@ Ext.define("TSDependencyByPI", {
                 summary.add({
                     xtype:'container',
                     margin: '2 2 5 10',
-                    html: Ext.String.format('{0} Needed by <b>{1}</b> for <br/>{2}:{3}',
+                    html: Ext.String.format("{0} Needed by <b>{1}</b> for <br/><a href='{2}' target='_top'>{3}</a>:{4}",
                         schedule_state_box,
                         successor.get('Project')._refObjectName,
+                        Rally.nav.Manager.getDetailUrl(successor),
                         successor.get('FormattedID'),
                         successor.get('Name')
                     )
