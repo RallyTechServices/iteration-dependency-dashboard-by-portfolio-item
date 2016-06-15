@@ -3,12 +3,12 @@
 <head>
     <title>Dependency Dashboard by Portfolio Item</title>
     <!--  (c) 2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Wed Jun 15 2016 10:55:52 GMT-0700 (PDT) -->
+    <!--  Build Date: Wed Jun 15 2016 11:31:42 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Jun 15 2016 10:55:52 GMT-0700 (PDT)";
+        var APP_BUILD_DATE = "Wed Jun 15 2016 11:31:42 GMT-0700 (PDT)";
         var BUILDER = "jmartin";
-        var CHECKSUM = 17850417989;
+        var CHECKSUM = 17850432074;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -785,9 +785,9 @@ Ext.define("TSDependencyByPI", {
                 summary.add({
                     xtype:'container',
                     margin: '2 2 5 10',
-                    html: Ext.String.format("{0} Waiting on <b>{1}</b> for <br/><a href='{2}' target='_top'>{3}</a>:{4}",
-                        schedule_state_box,
+                    html: Ext.String.format("Waiting on <b>{0}</b> for <br/>{1} <a href='{2}' target='_top'>{3}</a>:{4}",
                         predecessor.get('Project')._refObjectName,
+                        schedule_state_box,
                         Rally.nav.Manager.getDetailUrl(predecessor),
                         predecessor.get('FormattedID'),
                         predecessor.get('Name')
@@ -830,9 +830,9 @@ Ext.define("TSDependencyByPI", {
                 summary.add({
                     xtype:'container',
                     margin: '2 2 5 10',
-                    html: Ext.String.format("{0} Needed by <b>{1}</b> for <br/><a href='{2}' target='_top'>{3}</a>:{4}",
-                        schedule_state_box,
+                    html: Ext.String.format("Needed by <b>{0}</b> for <br/>{1} <a href='{2}' target='_top'>{3}</a>:{4}",
                         successor.get('Project')._refObjectName,
+                        schedule_state_box,
                         Rally.nav.Manager.getDetailUrl(successor),
                         successor.get('FormattedID'),
                         successor.get('Name')

@@ -429,9 +429,9 @@ Ext.define("TSDependencyByPI", {
                 summary.add({
                     xtype:'container',
                     margin: '2 2 5 10',
-                    html: Ext.String.format("{0} Waiting on <b>{1}</b> for <br/><a href='{2}' target='_top'>{3}</a>:{4}",
-                        schedule_state_box,
+                    html: Ext.String.format("Waiting on <b>{0}</b> for <br/>{1} <a href='{2}' target='_top'>{3}</a>:{4}",
                         predecessor.get('Project')._refObjectName,
+                        schedule_state_box,
                         Rally.nav.Manager.getDetailUrl(predecessor),
                         predecessor.get('FormattedID'),
                         predecessor.get('Name')
@@ -474,9 +474,9 @@ Ext.define("TSDependencyByPI", {
                 summary.add({
                     xtype:'container',
                     margin: '2 2 5 10',
-                    html: Ext.String.format("{0} Needed by <b>{1}</b> for <br/><a href='{2}' target='_top'>{3}</a>:{4}",
-                        schedule_state_box,
+                    html: Ext.String.format("Needed by <b>{0}</b> for <br/>{1} <a href='{2}' target='_top'>{3}</a>:{4}",
                         successor.get('Project')._refObjectName,
+                        schedule_state_box,
                         Rally.nav.Manager.getDetailUrl(successor),
                         successor.get('FormattedID'),
                         successor.get('Name')
