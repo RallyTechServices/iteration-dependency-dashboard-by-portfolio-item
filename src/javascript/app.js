@@ -419,9 +419,9 @@ Ext.define("TSDependencyByPI", {
                     var dependency_end = predecessor.get('Iteration').EndDate;
                     
                     if ( dependency_end >= story_end && !Ext.isEmpty(story_end) ) {
-                        status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'>  Scheduled for " + dependency_end.replace(/T.*$/,'');
+                        status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'>  Scheduled for " + predecessor.get('Iteration')._refObjectName;
                     } else { 
-                        status_message = "Scheduled for " + dependency_end.replace(/T.*$/,'');
+                        status_message = "Scheduled for " + predecessor.get('Iteration')._refObjectName;
                     }
                     
                 }
@@ -464,9 +464,9 @@ Ext.define("TSDependencyByPI", {
                     var dependency_end = successor.get('Iteration').EndDate;
                     
                     if ( dependency_end >= story_end && !Ext.isEmpty(story_end) ) {
-                        status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'>  Scheduled for " + dependency_end.replace(/T.*$/,'');
+                        status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'>  Scheduled for " + successor.get('Iteration')._refObjectName;
                     } else { 
-                        status_message = "Scheduled for " + dependency_end.replace(/T.*$/,'');
+                        status_message = "Scheduled for " + successor.get('Iteration')._refObjectName;
                     }
                     
                 }
