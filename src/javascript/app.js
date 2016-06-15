@@ -335,7 +335,7 @@ Ext.define("TSDependencyByPI", {
             style: {borderColor:'#000000', borderStyle:'solid', borderWidth:'1px'},
             padding: 5,
             margin: 10,
-            width: 550,
+            width: 525,
             //height: 400,
             //overflowY: 'auto'
         });
@@ -354,7 +354,7 @@ Ext.define("TSDependencyByPI", {
         
         var header = box.add({
             xtype:'container',
-            html: Ext.String.format("<span class='iteration-header'>{0}</span><br/>{1}<hr/>",
+            html: Ext.String.format("<span class='iteration-header'>{0}</span><br/>{1}",
                 iteration.Name,
                 iteration_date_string
             )
@@ -378,7 +378,7 @@ Ext.define("TSDependencyByPI", {
             
             var level = "__Grandparent";
             if ( story.get(level) ) {
-                hierarchy_string = hierarchy_string + " > " + Ext.String.format("<a href='{0}' target='_top'>{1}</a>: {2}",
+                hierarchy_string = hierarchy_string + " <br/> " + Ext.String.format("<a href='{0}' target='_top'>{1}</a>: {2}",
                     Rally.nav.Manager.getDetailUrl(story.get(level)),
                     story.get(level).FormattedID,
                     story.get(level).Name
@@ -387,7 +387,7 @@ Ext.define("TSDependencyByPI", {
             
             var level = "__Greatgrandparent";
             if ( story.get(level) ) {
-                hierarchy_string = hierarchy_string + " > " + Ext.String.format("<a href='{0}' target='_top'>{1}</a>: {2}",
+                hierarchy_string = hierarchy_string + " <br/> " + Ext.String.format("<a href='{0}' target='_top'>{1}</a>: {2}",
                     Rally.nav.Manager.getDetailUrl(story.get(level)),
                     story.get(level).FormattedID,
                     story.get(level).Name
@@ -397,7 +397,7 @@ Ext.define("TSDependencyByPI", {
             summary.add({
                 xtype:'container',
                 cls: 'story-header',
-                html: Ext.String.format("{0}<br/><a href='{1}' target='_top'>{2}</a>: {3}<br/>{4}",
+                html: Ext.String.format("<hr/>{0}<br/><a href='{1}' target='_top'>{2}</a>: {3}<br/><div style='padding: 1px 1px 1px 10px'>{4}</div>",
                     story.get('Project')._refObjectName,
                     Rally.nav.Manager.getDetailUrl(story),
                     story.get('FormattedID'),
@@ -448,7 +448,7 @@ Ext.define("TSDependencyByPI", {
 
             if ( !Ext.isEmpty(story.get("__Predecessors")) && story.get("__Predecessors").length > 0 &&
                 !Ext.isEmpty(story.get("__Successors")) && story.get("__Successors").length > 0  ) {
-                    summary.add({ xtype:'container', html: "<hr/>" });
+                    summary.add({ xtype:'container', html: "<hr style='border-top: 1px dotted #8c8b8b;'/>" });
             }
 
             Ext.Array.each(story.get('__Successors'), function(successor){
