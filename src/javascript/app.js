@@ -336,8 +336,8 @@ Ext.define("TSDependencyByPI", {
             padding: 5,
             margin: 10,
             width: 300,
-            height: 400,
-            overflowY: 'auto'
+            //height: 400,
+            //overflowY: 'auto'
         });
         
         var iteration_start = iteration.StartDate || "--";

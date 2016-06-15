@@ -3,12 +3,12 @@
 <head>
     <title>Dependency Dashboard by Portfolio Item</title>
     <!--  (c) 2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Tue Jun 14 2016 18:06:45 GMT-0700 (PDT) -->
+    <!--  Build Date: Wed Jun 15 2016 10:46:30 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue Jun 14 2016 18:06:45 GMT-0700 (PDT)";
+        var APP_BUILD_DATE = "Wed Jun 15 2016 10:46:30 GMT-0700 (PDT)";
         var BUILDER = "jmartin";
-        var CHECKSUM = 17700647856;
+        var CHECKSUM = 17705207271;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -692,8 +692,8 @@ Ext.define("TSDependencyByPI", {
             padding: 5,
             margin: 10,
             width: 300,
-            height: 400,
-            overflowY: 'auto'
+            //height: 400,
+            //overflowY: 'auto'
         });
         
         var iteration_start = iteration.StartDate || "--";
