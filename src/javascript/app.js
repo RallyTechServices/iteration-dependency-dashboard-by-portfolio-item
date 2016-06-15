@@ -335,7 +335,7 @@ Ext.define("TSDependencyByPI", {
             style: {borderColor:'#000000', borderStyle:'solid', borderWidth:'1px'},
             padding: 5,
             margin: 10,
-            width: 300,
+            width: 550,
             //height: 400,
             //overflowY: 'auto'
         });
