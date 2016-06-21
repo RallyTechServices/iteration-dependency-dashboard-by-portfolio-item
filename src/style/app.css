@@ -38,15 +38,15 @@
 }
 
 .state-legend-red {
-    background-color: red;
+    background-color: red !important;
 }
 
 .state-legend-yellow {
-    background-color: yellow;
+    background-color: yellow !important;
     color: black;
 }
 
 
 .state-legend-green {
-    background-color: green;
+    background-color: green !important;
 }
