@@ -36,3 +36,17 @@
 .iteration-header{
     font: bold 14px Arial, sans-serif;
 }
+
+.state-legend-red {
+    background-color: red;
+}
+
+.state-legend-yellow {
+    background-color: yellow;
+    color: black;
+}
+
+
+.state-legend-green {
+    background-color: green;
+}

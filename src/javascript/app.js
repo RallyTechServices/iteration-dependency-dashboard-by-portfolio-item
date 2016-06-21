@@ -20,7 +20,9 @@ Ext.define("TSDependencyByPI", {
             parentQuery: '( ObjectID > 0 )'
         }
     },
-                        
+    
+    allowedStates: [],
+    
     launch: function() {
         var me = this;
         if ( Ext.isEmpty( this.getSetting('parentRecordType') ) || Ext.isEmpty( this.getSetting('parentQuery') ) ) {
@@ -28,13 +30,24 @@ Ext.define("TSDependencyByPI", {
             return;
         }
         
-        TSUtilities.fetchPortfolioItemTypes().then({
+        this.setLoading("Fetching base information...");
+        
+        TSUtilities.fetchFieldValues('HierarchicalRequirement','ScheduleState').then({
             scope: this,
-            success: function(results) {
-                this.pi_types = results;
-                this._updateData();
+            success: function(states) {
+                this.allowedStates = states;
+                this.logger.log("Allowed States: ", this.allowedStates);
+                
+                TSUtilities.fetchPortfolioItemTypes().then({
+                    scope: this,
+                    success: function(results) {
+                        this.pi_types = results;
+                        this._updateData();
+                    }
+                });
             }
-        });
+        }).always(function() { me.setLoading(false); });
+        
     },
 
     _updateData: function() {
@@ -42,6 +55,8 @@ Ext.define("TSDependencyByPI", {
         this.stories = [];
         this.down('#display_box').removeAll();
         
+        this.setLoading("Fetching data...");
+
         Deft.Chain.pipeline([
             me._getPortfolioItems,
             me._getDescendantStoriesWithDependencies,
@@ -326,6 +341,7 @@ Ext.define("TSDependencyByPI", {
     },
     
     _addIterationBox: function(container,iteration_object) {
+        var me = this;
         var iteration = iteration_object.iteration;
         var stories = iteration_object.stories;
         
@@ -394,38 +410,64 @@ Ext.define("TSDependencyByPI", {
                 );
             }
             
+            var state_string = story.get('ScheduleState');
+            
             summary.add({
                 xtype:'container',
                 cls: 'story-header',
-                html: Ext.String.format("<hr/>{0}<br/><a href='{1}' target='_top'>{2}</a>: {3}<br/><div style='padding: 1px 1px 1px 10px'>{4}</div>",
+                html: Ext.String.format("<hr/>{0}<br/><a href='{1}' target='_top'>{2}</a>: {3} ({4})<br/><div style='padding: 1px 1px 1px 10px'>{5}</div>",
                     story.get('Project')._refObjectName,
                     Rally.nav.Manager.getDetailUrl(story),
                     story.get('FormattedID'),
                     story.get("_refObjectName"),
+                    state_string,
                     hierarchy_string
                 )
             });
             
             Ext.Array.each(story.get('__Predecessors'), function(predecessor){
                 
-                var schedule_state_box = Ext.String.format("<div class='state-legend'>{0}</div>",
-                    predecessor.get('ScheduleState').charAt(0)
+                var schedule_state = predecessor.get('ScheduleState');
+                var state_color = 'state-legend-red';
+                if ( schedule_state == 'Completed' ) {
+                    state_color = 'state-legend-yellow';
+                }
+                
+                if ( me._isAccepted(predecessor) ) {
+                    state_color = 'state-legend-green';
+                }
+                
+                var schedule_state_box = Ext.String.format("<div class='state-legend {0}'>{1}</div>",
+                    state_color,
+                    schedule_state.charAt(0)
                 );
                 
-                var status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'> Not yet scheduled";
-                
+                var status_flag = true;
+                var status_message = "Not yet scheduled";
+               
                 if ( !Ext.isEmpty(predecessor.get('Iteration') ) ) {
                     var story_end = iteration.EndDate;
                     var dependency_end = predecessor.get('Iteration').EndDate;
+
+                    status_message = "Scheduled for " + predecessor.get('Iteration')._refObjectName;
                     
                     if ( dependency_end >= story_end && !Ext.isEmpty(story_end) ) {
-                        status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'>  Scheduled for " + predecessor.get('Iteration')._refObjectName;
+                        status_flag = true;
                     } else { 
-                        status_message = "Scheduled for " + predecessor.get('Iteration')._refObjectName;
+                        status_flag = false;
                     }
                     
                 }
-                                    
+                
+                if ( me._isAccepted(predecessor) ) {
+                    status_flag = false;
+                }
+                
+                if ( status_flag ) {
+                    var warning_flag = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'>";
+                    status_message = warning_flag + " " + status_message;
+                }
+                
                 summary.add({
                     xtype:'container',
                     margin: '2 2 5 10',
@@ -452,25 +494,48 @@ Ext.define("TSDependencyByPI", {
             }
 
             Ext.Array.each(story.get('__Successors'), function(successor){
-                                
-                var schedule_state_box = Ext.String.format("<div class='state-legend'>{0}</div>",
-                    successor.get('ScheduleState').charAt(0)
+                
+                var schedule_state = successor.get('ScheduleState');
+                var state_color = 'state-legend-red';
+                if ( schedule_state == 'Completed' ) {
+                    state_color = 'state-legend-yellow';
+                }
+                
+                if ( me._isAccepted(successor) ) {
+                    state_color = 'state-legend-green';
+                }
+                
+                var schedule_state_box = Ext.String.format("<div class='state-legend {0}'>{1}</div>",
+                    state_color,
+                    schedule_state.charAt(0)
                 );
                 
-                var status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'> Not yet scheduled";
+                var status_flag = true;
+                var status_message = "Not yet scheduled"; 
                 
                 if ( !Ext.isEmpty(successor.get('Iteration') ) ) {
                     var story_end = iteration.EndDate;
                     var dependency_end = successor.get('Iteration').EndDate;
-                    
+                                        
+                    status_message = "Scheduled for " + successor.get('Iteration')._refObjectName;
+
                     if ( dependency_end >= story_end && !Ext.isEmpty(story_end) ) {
-                        status_message = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'>  Scheduled for " + successor.get('Iteration')._refObjectName;
+                        status_flag = true;
                     } else { 
-                        status_message = "Scheduled for " + successor.get('Iteration')._refObjectName;
+                        status_flag = false;
                     }
                     
                 }
-                                    
+               
+                if ( me._isAccepted(successor) ) {
+                    status_flag = false;
+                }
+                
+                if ( status_flag ) {
+                    var warning_flag = "<img src='/slm/images/icon_alert_sm.gif' alt='Warning' title='Warning'>";
+                    status_message = warning_flag + " " + status_message;
+                }
+                
                 summary.add({
                     xtype:'container',
                     margin: '2 2 5 10',
@@ -493,6 +558,10 @@ Ext.define("TSDependencyByPI", {
             
         });
             
+    },
+    
+    _isAccepted: function(item) {
+        return (Ext.Array.indexOf(this.allowedStates,'Accepted') <= Ext.Array.indexOf(this.allowedStates,item.get('ScheduleState')) );
     },
     
     /*

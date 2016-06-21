@@ -91,6 +91,23 @@ Ext.define('TSUtilities', {
         return ref_array[ref_array.length-1];
     },
     
+    fetchFieldValues: function(record_type, field_name) {
+        var deferred = Ext.create('Deft.Deferred');
+        Rally.data.ModelFactory.getModel({
+            type: record_type,
+            success: function(model) {
+                model.getField(field_name).getAllowedValueStore().load({
+                    callback: function(allowed_values, operation, success) {
+                        deferred.resolve(Ext.Array.map(allowed_values, function(allowed_value){
+                            return allowed_value.get('StringValue');
+                        }));
+                    }
+                });
+            }
+        });
+        return deferred.promise;
+    },
+    
     fetchPortfolioItemTypes: function() {
         var config = {
             model: 'TypeDefinition', 
