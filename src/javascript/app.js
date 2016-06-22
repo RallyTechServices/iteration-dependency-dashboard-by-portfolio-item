@@ -131,7 +131,7 @@ Ext.define("TSDependencyByPI", {
         
         var config = {
             model: 'UserStory',
-            fetch: ['ObjectID','FormattedID','Name','Predecessors','Successors','Iteration','ScheduleState','Blocked',
+            fetch: ['ObjectID','FormattedID','Name','Predecessors','Successors','Iteration','ScheduleState','ScheduleStatePrefix','Blocked',
                 'StartDate', 'EndDate', 'Project',lowest_level_pi_name,'Parent'],
             filters: filters,
             limit: Infinity,
@@ -278,7 +278,7 @@ Ext.define("TSDependencyByPI", {
         var deferred = Ext.create('Deft.Deferred');
         
         story.getCollection('Predecessors').load({
-            fetch: ['FormattedID', 'Name', 'ScheduleState','Iteration','Blocked',
+            fetch: ['FormattedID', 'Name', 'ScheduleState','ScheduleStatePrefix','Iteration','Blocked',
                 'StartDate','EndDate','Project'],
             callback: function(records, operation, success) {
                 story.set('__Predecessors', records);
@@ -293,7 +293,7 @@ Ext.define("TSDependencyByPI", {
         var deferred = Ext.create('Deft.Deferred');
 
         story.getCollection('Successors').load({
-            fetch: ['FormattedID', 'Name', 'ScheduleState','Iteration','Blocked',
+            fetch: ['FormattedID', 'Name', 'ScheduleState','ScheduleStatePrefix','Iteration','Blocked',
                 'StartDate','EndDate','Project'],
             callback: function(records, operation, success) {
                 story.set('__Successors', records);
@@ -441,7 +441,7 @@ Ext.define("TSDependencyByPI", {
                 
                 var schedule_state_box = Ext.String.format("<div class='state-legend {0}'>{1}</div>",
                     state_color,
-                    schedule_state.charAt(0)
+                    predecessor.get('ScheduleStatePrefix')
                 );
                 
                 var status_flag = true;
@@ -516,7 +516,7 @@ Ext.define("TSDependencyByPI", {
                 
                 var schedule_state_box = Ext.String.format("<div class='state-legend {0}'>{1}</div>",
                     state_color,
-                    schedule_state.charAt(0)
+                    successor.get('ScheduleStatePrefix')
                 );
                 
                 var status_flag = true;
@@ -655,6 +655,7 @@ Ext.define("TSDependencyByPI", {
                 text: 'Target Schedule State',
                 renderer: function(value, meta, record) {
                     if ( Ext.isEmpty(value) || !Ext.isFunction(value.get) ) { return ""; }
+                    console.log('...', record);
                     return value.get('ScheduleState');
                 }
             },

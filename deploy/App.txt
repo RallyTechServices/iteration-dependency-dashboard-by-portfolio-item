@@ -3,12 +3,12 @@
 <head>
     <title>Dependency Dashboard by Portfolio Item</title>
     <!--  (c) 2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Tue Jun 21 2016 19:43:14 GMT-0700 (PDT) -->
+    <!--  Build Date: Wed Jun 22 2016 10:52:11 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue Jun 21 2016 19:43:14 GMT-0700 (PDT)";
+        var APP_BUILD_DATE = "Wed Jun 22 2016 10:52:11 GMT-0700 (PDT)";
         var BUILDER = "jmartin";
-        var CHECKSUM = 50281469455;
+        var CHECKSUM = 50638299298;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -891,7 +891,7 @@ Ext.define("TSDependencyByPI", {
         
         var config = {
             model: 'UserStory',
-            fetch: ['ObjectID','FormattedID','Name','Predecessors','Successors','Iteration','ScheduleState','Blocked',
+            fetch: ['ObjectID','FormattedID','Name','Predecessors','Successors','Iteration','ScheduleState','ScheduleStatePrefix','Blocked',
                 'StartDate', 'EndDate', 'Project',lowest_level_pi_name,'Parent'],
             filters: filters,
             limit: Infinity,
@@ -1038,7 +1038,7 @@ Ext.define("TSDependencyByPI", {
         var deferred = Ext.create('Deft.Deferred');
         
         story.getCollection('Predecessors').load({
-            fetch: ['FormattedID', 'Name', 'ScheduleState','Iteration','Blocked',
+            fetch: ['FormattedID', 'Name', 'ScheduleState','ScheduleStatePrefix','Iteration','Blocked',
                 'StartDate','EndDate','Project'],
             callback: function(records, operation, success) {
                 story.set('__Predecessors', records);
@@ -1053,7 +1053,7 @@ Ext.define("TSDependencyByPI", {
         var deferred = Ext.create('Deft.Deferred');
 
         story.getCollection('Successors').load({
-            fetch: ['FormattedID', 'Name', 'ScheduleState','Iteration','Blocked',
+            fetch: ['FormattedID', 'Name', 'ScheduleState','ScheduleStatePrefix','Iteration','Blocked',
                 'StartDate','EndDate','Project'],
             callback: function(records, operation, success) {
                 story.set('__Successors', records);
@@ -1201,7 +1201,7 @@ Ext.define("TSDependencyByPI", {
                 
                 var schedule_state_box = Ext.String.format("<div class='state-legend {0}'>{1}</div>",
                     state_color,
-                    schedule_state.charAt(0)
+                    predecessor.get('ScheduleStatePrefix')
                 );
                 
                 var status_flag = true;
@@ -1276,7 +1276,7 @@ Ext.define("TSDependencyByPI", {
                 
                 var schedule_state_box = Ext.String.format("<div class='state-legend {0}'>{1}</div>",
                     state_color,
-                    schedule_state.charAt(0)
+                    successor.get('ScheduleStatePrefix')
                 );
                 
                 var status_flag = true;
@@ -1415,6 +1415,7 @@ Ext.define("TSDependencyByPI", {
                 text: 'Target Schedule State',
                 renderer: function(value, meta, record) {
                     if ( Ext.isEmpty(value) || !Ext.isFunction(value.get) ) { return ""; }
+                    console.log('...', record);
                     return value.get('ScheduleState');
                 }
             },
