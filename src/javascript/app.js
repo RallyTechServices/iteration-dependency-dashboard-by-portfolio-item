@@ -431,7 +431,7 @@ Ext.define("TSDependencyByPI", {
                 
                 var schedule_state = predecessor.get('ScheduleState');
                 var state_color = 'state-legend-red';
-                if ( schedule_state == 'Completed' ) {
+                if ( schedule_state == 'Completed' || schedule_state == 'In-Progress' ) {
                     state_color = 'state-legend-yellow';
                 }
                 
