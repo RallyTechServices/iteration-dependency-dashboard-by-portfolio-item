@@ -5,6 +5,9 @@ Ext.define("TSDependencyByPI", {
     defaults: { margin: 10 },
     
     stories: [],
+    allowedStates: [],
+    rows: [],
+    
     
     items: [
         {xtype:'container',itemId:'display_box', overflowY: 'auto', layout: 'column'}
@@ -20,8 +23,6 @@ Ext.define("TSDependencyByPI", {
             parentQuery: '( ObjectID > 0 )'
         }
     },
-    
-    allowedStates: [],
     
     launch: function() {
         var me = this;
@@ -425,6 +426,7 @@ Ext.define("TSDependencyByPI", {
                 )
             });
             
+            
             Ext.Array.each(story.get('__Predecessors'), function(predecessor){
                 
                 var schedule_state = predecessor.get('ScheduleState');
@@ -484,6 +486,13 @@ Ext.define("TSDependencyByPI", {
                     xtype:'container',
                     margin: '2 2 5 30',
                     html: status_message
+                });
+                
+                me.rows.push({
+                    Iteration: iteration,
+                    Story: story,
+                    Type: 'Waiting on',
+                    Target: predecessor
                 });
                 
             });
@@ -554,6 +563,14 @@ Ext.define("TSDependencyByPI", {
                     html: status_message
                 });
                 
+                
+                me.rows.push({
+                    Iteration: iteration,
+                    Story: story,
+                    Type: 'Needed by',
+                    Target: successor
+                });
+                
             });
             
         });
@@ -579,8 +596,132 @@ Ext.define("TSDependencyByPI", {
         return model;
     },
     
+    _getExportColumns: function() {
+        return [
+            {
+                dataIndex: 'Iteration',
+                text: 'Iteration',
+                renderer: function(value,meta,record) { 
+                    if ( Ext.isEmpty(value) || Ext.isEmpty(value._refObjectName) ) { return "Unscheduled"; }
+                    return value._refObjectName;
+                }
+            },
+            { 
+                dataIndex: 'Story',
+                text: 'Story ID',
+                renderer: function(value, meta, record) {
+                    if ( Ext.isEmpty(value) || !Ext.isFunction(value.get) ) { return ""; }
+                    return value.get('FormattedID');
+                }
+            },
+            { 
+                dataIndex: 'Story',
+                text: 'Story Name',
+                renderer: function(value, meta, record) {
+                    if ( Ext.isEmpty(value) || !Ext.isFunction(value.get) ) { return ""; }
+                    return value.get('Name');
+                }
+            },
+            { 
+                dataIndex: 'Story',
+                text: 'Schedule State',
+                renderer: function(value, meta, record) {
+                    if ( Ext.isEmpty(value) || !Ext.isFunction(value.get) ) { return ""; }
+                    return value.get('ScheduleState');
+                }
+            },
+            { 
+                dataIndex: 'Type',
+                text: 'Direction'
+            },
+            { 
+                dataIndex: 'Target',
+                text: 'Target Story ID',
+                renderer: function(value, meta, record) {
+                    if ( Ext.isEmpty(value) || !Ext.isFunction(value.get) ) { return ""; }
+                    return value.get('FormattedID');
+                }
+            },
+            { 
+                dataIndex: 'Target',
+                text: 'Target Story Name',
+                renderer: function(value, meta, record) {
+                    if ( Ext.isEmpty(value) || !Ext.isFunction(value.get) ) { return ""; }
+                    return value.get('Name');
+                }
+            },
+            { 
+                dataIndex: 'Target',
+                text: 'Target Schedule State',
+                renderer: function(value, meta, record) {
+                    if ( Ext.isEmpty(value) || !Ext.isFunction(value.get) ) { return ""; }
+                    return value.get('ScheduleState');
+                }
+            },
+            { 
+                dataIndex: 'Target',
+                text: 'Target Iteration',
+                renderer: function(value, meta, record) {
+                    if ( Ext.isEmpty(value) || !Ext.isFunction(value.get) ) { return "Unscheduled"; }
+                    var iteration = value.get('Iteration');
+                    if ( Ext.isEmpty(iteration) || Ext.isEmpty(iteration._refObjectName) ) { return "Unscheduled"; }
+                    return value.get('Iteration')._refObjectName;
+                }
+            },
+            { 
+                dataIndex: 'Target',
+                text: 'Target Team',
+                renderer: function(value, meta, record) {
+                    if ( Ext.isEmpty(value) || !Ext.isFunction(value.get) ) { return ""; }
+                    var iteration = value.get('Project');
+                    if ( Ext.isEmpty(iteration) || Ext.isEmpty(iteration._refObjectName) ) { return ""; }
+                    return value.get('Project')._refObjectName;
+                }
+            }
+        ];
+    },
+    
+    _export: function(){
+        var me = this;
+        this.logger.log('_export');
+        
+        var rows = this.rows;
+        
+        var grid = Ext.create('Rally.ui.grid.Grid',{
+            store: Ext.create('Rally.data.custom.Store',{ data: rows}),
+            columnCfgs: this._getExportColumns()
+        });
+        
+        this.logger.log('rows:', rows.length, rows);
+        
+        var filename = 'dependency-report.csv';
+
+        this.logger.log('saving file:', filename);
+        
+        this.setLoading("Generating CSV");
+        Deft.Chain.sequence([
+            function() { return Rally.technicalservices.FileUtilities.getCSVFromRows(this,grid,rows); } 
+        ]).then({
+            scope: this,
+            success: function(csv){
+                this.logger.log('got back csv ', csv.length);
+                if (csv && csv.length > 0){
+                    Rally.technicalservices.FileUtilities.saveCSVToFile(csv,filename);
+                } else {
+                    Rally.ui.notify.Notifier.showWarning({message: 'No data to export'});
+                }
+                
+            }
+        }).always(function() { me.setLoading(false); });
+    },
+    
     getOptions: function() {
         return [
+            { 
+                text: 'Export',
+                handler: this._export,
+                scope: this
+            },
             {
                 text: 'About...',
                 handler: this._launchInfo,
