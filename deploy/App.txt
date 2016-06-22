@@ -3,12 +3,12 @@
 <head>
     <title>Dependency Dashboard by Portfolio Item</title>
     <!--  (c) 2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Wed Jun 22 2016 11:47:37 GMT-0700 (PDT) -->
+    <!--  Build Date: Wed Jun 22 2016 11:52:06 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Jun 22 2016 11:47:37 GMT-0700 (PDT)";
+        var APP_BUILD_DATE = "Wed Jun 22 2016 11:52:06 GMT-0700 (PDT)";
         var BUILDER = "jmartin";
-        var CHECKSUM = 50735755063;
+        var CHECKSUM = 51617983568;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1388,6 +1388,16 @@ Ext.define("TSDependencyByPI", {
                 renderer: function(value, meta, record) {
                     if ( Ext.isEmpty(value) || !Ext.isFunction(value.get) ) { return ""; }
                     return value.get('ScheduleState');
+                }
+            },
+            { 
+                dataIndex: 'Story',
+                text: 'Team',
+                renderer: function(value, meta, record) {
+                    if ( Ext.isEmpty(value) || !Ext.isFunction(value.get) ) { return ""; }
+                    var iteration = value.get('Project');
+                    if ( Ext.isEmpty(iteration) || Ext.isEmpty(iteration._refObjectName) ) { return ""; }
+                    return value.get('Project')._refObjectName;
                 }
             },
             { 

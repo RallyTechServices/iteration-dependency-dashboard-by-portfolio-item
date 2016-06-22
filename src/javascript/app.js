@@ -631,6 +631,16 @@ Ext.define("TSDependencyByPI", {
                 }
             },
             { 
+                dataIndex: 'Story',
+                text: 'Team',
+                renderer: function(value, meta, record) {
+                    if ( Ext.isEmpty(value) || !Ext.isFunction(value.get) ) { return ""; }
+                    var iteration = value.get('Project');
+                    if ( Ext.isEmpty(iteration) || Ext.isEmpty(iteration._refObjectName) ) { return ""; }
+                    return value.get('Project')._refObjectName;
+                }
+            },
+            { 
                 dataIndex: 'Type',
                 text: 'Direction'
             },
