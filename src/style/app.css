@@ -46,7 +46,13 @@
     color: black;
 }
 
-
 .state-legend-green {
     background-color: green !important;
 }
+
+.state-legend-grey {
+    color: black;
+    background-color: #DCDCDC !important;
+    float: right;
+}
+
