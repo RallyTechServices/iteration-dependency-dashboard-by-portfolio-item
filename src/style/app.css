@@ -50,9 +50,9 @@
     background-color: green !important;
 }
 
-.state-legend-grey {
+span.state-legend-grey {
+    padding: 1px 3px 2px 3px;
     color: black;
     background-color: #DCDCDC !important;
-    float: right;
 }
 

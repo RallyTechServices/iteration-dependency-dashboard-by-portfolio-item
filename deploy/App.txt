@@ -3,12 +3,12 @@
 <head>
     <title>Dependency Dashboard by Portfolio Item</title>
     <!--  (c) 2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Thu Jun 23 2016 11:29:24 GMT-0700 (PDT) -->
+    <!--  Build Date: Thu Jun 23 2016 13:52:02 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Jun 23 2016 11:29:24 GMT-0700 (PDT)";
+        var APP_BUILD_DATE = "Thu Jun 23 2016 13:52:02 GMT-0700 (PDT)";
         var BUILDER = "jmartin";
-        var CHECKSUM = 52380887169;
+        var CHECKSUM = 52388582227;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1172,7 +1172,7 @@ Ext.define("TSDependencyByPI", {
             }
             
             var state_string = story.get('ScheduleState');
-            var schedule_state_box = Ext.String.format("<div class='state-legend state-legend-grey'>{0}</div>",
+            var schedule_state_box = Ext.String.format("<span class='state-legend-grey'>{0}</span>",
                     story.get('ScheduleStatePrefix')
                 );
             summary.add({
@@ -1182,8 +1182,8 @@ Ext.define("TSDependencyByPI", {
                     story.get('Project')._refObjectName,
                     Rally.nav.Manager.getDetailUrl(story),
                     story.get('FormattedID'),
-                    story.get("_refObjectName"),
                     schedule_state_box,
+                    story.get("_refObjectName"),
                     hierarchy_string
                 )
             });
@@ -1578,10 +1578,10 @@ Ext.define("TSDependencyByPI", {
     background-color: green !important;
 }
 
-.state-legend-grey {
+span.state-legend-grey {
+    padding: 1px 3px 2px 3px;
     color: black;
     background-color: #DCDCDC !important;
-    float: right;
 }
 
 

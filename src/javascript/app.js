@@ -412,7 +412,7 @@ Ext.define("TSDependencyByPI", {
             }
             
             var state_string = story.get('ScheduleState');
-            var schedule_state_box = Ext.String.format("<div class='state-legend state-legend-grey'>{0}</div>",
+            var schedule_state_box = Ext.String.format("<span class='state-legend-grey'>{0}</span>",
                     story.get('ScheduleStatePrefix')
                 );
             summary.add({
@@ -422,8 +422,8 @@ Ext.define("TSDependencyByPI", {
                     story.get('Project')._refObjectName,
                     Rally.nav.Manager.getDetailUrl(story),
                     story.get('FormattedID'),
-                    story.get("_refObjectName"),
                     schedule_state_box,
+                    story.get("_refObjectName"),
                     hierarchy_string
                 )
             });
